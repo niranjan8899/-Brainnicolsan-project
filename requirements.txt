@@ -1,0 +1,9 @@
+streamlit>=1.30
+pandas>=2.0
+pyarrow>=14.0
+gdown>=4.7
+openai  # Optional: if get_ai_response uses OpenAI
+scikit-learn
+numpy
+tqdm
+matplotlib
