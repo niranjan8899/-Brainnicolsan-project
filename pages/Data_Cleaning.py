@@ -7,7 +7,7 @@ import gdown
 import os
 
 # ------------------ Google Drive Setup ------------------
-PRICE_DATA_DRIVE_URL = "https://drive.google.com/uc?id=/1I1zViTWNsIbTwfFMoqNCevqrADk12YSV"
+PRICE_DATA_DRIVE_URL = "https://drive.google.com/uc?id=1I1zViTWNsIbTwfFMoqNCevqrADk12YSV"
 
 # ------------------ Download from Google Drive ------------------
 def download_from_drive(gdrive_url, output_path):
