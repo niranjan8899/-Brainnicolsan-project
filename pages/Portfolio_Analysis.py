@@ -3,22 +3,34 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 import pyarrow.parquet as pq
+import gdown  # For downloading from Google Drive
 from utils.backtest_engine import prepare_data, compute_portfolio_nav, compute_metrics
 from utils.analysis_tools import compare_multiple_portfolios
+
+# ----------- GDrive File IDs -----------
+METADATA_FILE_ID = "1P5eTXhvmn-5mtVtqMJg3yuBhbWKclEPs"
+PRICE_FILE_ID = "1I1zViTWNsIbTwfFMoqNCevqrADk12YSV"
+
+# ----------- GDrive Downloader -----------
+@st.cache_data
+def download_from_gdrive(file_id: str, output: str):
+    url = f"https://drive.google.com/uc?id={file_id}"
+    gdown.download(url, output, quiet=False)
+    return output
 
 # ----------- Load Metadata -----------
 @st.cache_data
 def load_metadata():
-    return pd.read_parquet("data/asset_metadata.parquet")
+    path = download_from_gdrive(METADATA_FILE_ID, "asset_metadata.parquet")
+    return pd.read_parquet(path)
 
 # ----------- Load Filtered Price Data -----------
 @st.cache_data
 def load_filtered_price_data(selected_assets, start_date, end_date):
-    table = pq.read_table("data/price_data.parquet")
+    path = download_from_gdrive(PRICE_FILE_ID, "price_data.parquet")
+    table = pq.read_table(path)
     df = table.to_pandas()
-    # Ensure date column is datetime64[ns]
     df['date'] = pd.to_datetime(df['date'])
-    # Convert input dates to pandas Timestamp for proper comparison
     start_date = pd.to_datetime(start_date)
     end_date = pd.to_datetime(end_date)
     df = df[df["asset_id"].isin(selected_assets) & 
@@ -54,22 +66,17 @@ for i in range(num_portfolios):
 # Only show date pickers once at least one valid portfolio is defined
 if portfolios:
     st.subheader("📅 Select Time Period")
-    # Set static global min/max date for now
     start_date = st.date_input("Start Date", value=pd.to_datetime("2015-01-01").date())
     end_date = st.date_input("End Date", value=pd.to_datetime("2023-12-31").date(), min_value=start_date)
 
     if st.button("🚀 Compare Portfolios"):
-        # Collect all unique assets across all portfolios
         all_assets = list(set([a for portfolio, _ in portfolios for a in portfolio]))
-
-        # Load only required price data
         price_data = load_filtered_price_data(all_assets, start_date, end_date)
         if price_data.empty:
             st.warning("No price data available for selected portfolios and period.")
         else:
             navs = {}
             for i, (assets, weights) in enumerate(portfolios):
-                # Convert dates to datetime64[ns] before passing to prepare_data
                 start_dt = pd.to_datetime(start_date)
                 end_dt = pd.to_datetime(end_date)
                 df = prepare_data(price_data, assets, start_dt, end_dt)
@@ -82,7 +89,7 @@ if portfolios:
             fig = px.line(nav_df, x=nav_df.index, y=nav_df.columns, labels={"value": "NAV", "index": "Date"})
             st.plotly_chart(fig, use_container_width=True)
 
-            # Metrics Table (Advanced)
+            # Metrics Table
             metrics_df = compare_multiple_portfolios(navs)
             st.subheader("📊 Performance Metrics")
             st.dataframe(metrics_df)
