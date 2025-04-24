@@ -13,8 +13,7 @@ def download_from_drive(gdrive_url, output_path):
         gdown.download(gdrive_url, output_path, quiet=False)
 
 # ------------------ File URLs (replace these) ------------------
-PRICE_DATA_DRIVE_URL = "https://drive.google.com/file/d/1I1zViTWNsIbTwfFMoqNCevqrADk12YSV/view?usp=sharing"
-
+PRICE_DATA_DRIVE_URL = "https://drive.google.com/uc?id=1I1zViTWNsIbTwfFMoqNCevqrADk12YSV"
 # ------------------ Load Asset IDs ------------------
 @st.cache_data
 def load_asset_ids():
