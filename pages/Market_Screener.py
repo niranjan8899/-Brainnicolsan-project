@@ -30,7 +30,59 @@ def load_price_data_for_asset(asset_id: str):
 
 # ---------- Page Setup ----------
 st.set_page_config(page_title="📊 Market Screener", layout="wide")
-st.markdown("""<style>/* your existing CSS here */</style>""", unsafe_allow_html=True)
+st.markdown("""
+    <style>
+        .main {background-color: #000000;}
+        .block-container {padding-top: 1rem; background-color: #000000;}
+        h1, h2, h3, h4 {
+            color: #ffffff;
+        }
+        .stRadio > div {flex-direction: row;}
+        .stSelectbox label, .stTextInput label {
+            font-weight: bold;
+            color: #ffffff;
+        }
+        .stTextInput input, .stSelectbox select {
+            background-color: #333333;
+            color: white;
+        }
+        .stRadio label {
+            color: white;
+        }
+        .ag-theme-streamlit {
+            border-radius: 8px;
+            border: 1px solid #444;
+            background-color: #111;
+        }
+        .ag-header {
+            background-color: #222 !important;
+            color: white !important;
+        }
+        .ag-row {
+            background-color: #111 !important;
+            color: white !important;
+        }
+        .ag-cell {
+            border-color: #444 !important;
+        }
+        .stButton button {
+            background-color: #333;
+            color: white;
+            border: 1px solid #555;
+        }
+        .stButton button:hover {
+            background-color: #444;
+        }
+        .stExpander {
+            background-color: #111;
+            border: 1px solid #444;
+            border-radius: 8px;
+        }
+        .stExpander label {
+            color: white !important;
+        }
+    </style>
+""", unsafe_allow_html=True)
 
 st.title("📊 Market Screener and Search Tool")
 
