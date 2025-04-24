@@ -1,15 +1,24 @@
-# 3_Data_Cleaning.py
-
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 import pyarrow.parquet as pq
 from utils.data_cleaner import detect_missing_data, detect_outliers
+import gdown
+import os
 
-# ----------- Load Only Needed Data -----------
+# ------------------ Google Drive Setup ------------------
+PRICE_DATA_DRIVE_URL = "https://drive.google.com/uc?id=/1I1zViTWNsIbTwfFMoqNCevqrADk12YSV"
+
+# ------------------ Download from Google Drive ------------------
+def download_from_drive(gdrive_url, output_path):
+    if not os.path.exists(output_path):
+        gdown.download(gdrive_url, output_path, quiet=False)
+
+# ------------------ Load Only Needed Data ------------------
 @st.cache_data
 def load_minimal_price_data():
-    table = pq.read_table("data/price_data.parquet", columns=["asset_id", "date", "close"])
+    download_from_drive(PRICE_DATA_DRIVE_URL, "price_data.parquet")
+    table = pq.read_table("price_data.parquet", columns=["asset_id", "date", "close"])
     df = table.to_pandas()
     return df
 
@@ -18,17 +27,19 @@ def load_asset_price_data(asset_id):
     df = load_minimal_price_data()
     return df[df["asset_id"] == asset_id]
 
-# ----------- UI -----------
+# ------------------ UI ------------------
 st.set_page_config(page_title="🧹 Data Cleaning Tool", layout="wide")
 st.title("🧹 Data Cleaning & Validation Tool")
 
 price_data = load_minimal_price_data()
 
+# ----------- Step 1: Detect Missing Data -----------
 st.subheader("📌 Step 1: Detect Missing Data")
 missing_assets = detect_missing_data(price_data)
 st.write(f"Found {len(missing_assets)} assets with gaps > 6 days")
 st.dataframe(pd.DataFrame(missing_assets, columns=["Asset ID with Missing Data"]))
 
+# ----------- Step 2: Detect Outliers -----------
 st.subheader("📌 Step 2: Detect Outliers")
 outlier_df = detect_outliers(price_data)
 
@@ -44,6 +55,7 @@ if not outlier_df.empty:
 else:
     st.success("✅ No extreme outliers detected.")
 
+# ----------- Simulate Cleaning -----------
 st.markdown("---")
 
 if st.button("🚀 Simulate Cleaning (Tag Outliers)"):
