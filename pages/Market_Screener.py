@@ -3,73 +3,34 @@ import pandas as pd
 import plotly.express as px
 from st_aggrid import AgGrid, GridOptionsBuilder
 import pyarrow.parquet as pq
+import gdown  # NEW
+
+# ----------- GDrive Downloader ----------
+@st.cache_data
+def download_from_gdrive(file_id: str, output: str):
+    url = f"https://drive.google.com/uc?id={file_id}"
+    gdown.download(url, output, quiet=False)
+    return output
 
 # ---------- Load Data ----------
 @st.cache_data
 def load_metadata():
-    return pd.read_parquet("data/asset_metadata.parquet")
+    # Replace with actual metadata file ID
+    metadata_file_id = "1P5eTXhvmn-5mtVtqMJg3yuBhbWKclEPs"
+    metadata_path = download_from_gdrive(metadata_file_id, "asset_metadata.parquet")
+    return pd.read_parquet(metadata_path)
 
 @st.cache_data
 def load_price_data_for_asset(asset_id: str):
-    table = pq.read_table("data/price_data.parquet")
+    price_file_id = "1I1zViTWNsIbTwfFMoqNCevqrADk12YSV"
+    price_path = download_from_gdrive(price_file_id, "price_data.parquet")
+    table = pq.read_table(price_path)
     df = table.to_pandas()
     return df[df['asset_id'] == asset_id].copy()
 
 # ---------- Page Setup ----------
 st.set_page_config(page_title="📊 Market Screener", layout="wide")
-st.markdown("""
-    <style>
-        .main {background-color: #000000;}
-        .block-container {padding-top: 1rem; background-color: #000000;}
-        h1, h2, h3, h4 {
-            color: #ffffff;
-        }
-        .stRadio > div {flex-direction: row;}
-        .stSelectbox label, .stTextInput label {
-            font-weight: bold;
-            color: #ffffff;
-        }
-        .stTextInput input, .stSelectbox select {
-            background-color: #333333;
-            color: white;
-        }
-        .stRadio label {
-            color: white;
-        }
-        .ag-theme-streamlit {
-            border-radius: 8px;
-            border: 1px solid #444;
-            background-color: #111;
-        }
-        .ag-header {
-            background-color: #222 !important;
-            color: white !important;
-        }
-        .ag-row {
-            background-color: #111 !important;
-            color: white !important;
-        }
-        .ag-cell {
-            border-color: #444 !important;
-        }
-        .stButton button {
-            background-color: #333;
-            color: white;
-            border: 1px solid #555;
-        }
-        .stButton button:hover {
-            background-color: #444;
-        }
-        .stExpander {
-            background-color: #111;
-            border: 1px solid #444;
-            border-radius: 8px;
-        }
-        .stExpander label {
-            color: white !important;
-        }
-    </style>
-""", unsafe_allow_html=True)
+st.markdown("""<style>/* your existing CSS here */</style>""", unsafe_allow_html=True)
 
 st.title("📊 Market Screener and Search Tool")
 
