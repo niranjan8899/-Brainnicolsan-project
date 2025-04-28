@@ -7,19 +7,15 @@ from datetime import date
 # ----------- Load Metadata -----------
 @st.cache_data
 def load_metadata():
-    # Assuming metadata is simple: using asset name from the CSV itself
-    return pd.DataFrame({
-        'asset_id': ['Economic.FRED.DGS30']
-    })
+    return pd.read_csv("data/asset_Economic.FRED.DGS30.csv")
 
-# ----------- Load Filtered Price Data -----------
+# ----------- Load Only Required Price Data -----------
 @st.cache_data
 def load_filtered_price_data(selected_assets, start_date, end_date):
-    # Load directly from local CSV
-    df = pd.read_csv("asset_Economic.FRED.DGS30.csv")
-    df['date'] = pd.to_datetime(df['date'])
-
-    return df[df["asset_id"].isin(selected_assets) & df["date"].between(pd.to_datetime(start_date), pd.to_datetime(end_date))]
+    df = pd.read_csv("data/price_data.csv")  # Replace with your actual price data file path
+    df['date'] = pd.to_datetime(df['date'])  # Ensure the 'date' column is in datetime format
+    df = df[df["asset_id"].isin(selected_assets) & (df["date"].between(pd.to_datetime(start_date), pd.to_datetime(end_date)))]
+    return df
 
 # ----------- UI -----------
 st.set_page_config(page_title="📈 Portfolio Backtesting Tool", layout="wide")
@@ -35,8 +31,7 @@ weights = []
 if portfolio_assets:
     st.write("Assign weights to selected assets (must total 100%)")
     for asset in portfolio_assets:
-        w = st.number_input(f"Weight for {asset} (%)", min_value=0.0, max_value=100.0,
-                            value=round(100/len(portfolio_assets), 2))
+        w = st.number_input(f"Weight for {asset} (%)", min_value=0.0, max_value=100.0, value=round(100/len(portfolio_assets), 2))
         weights.append(w)
 
     if sum(weights) != 100:
@@ -64,8 +59,7 @@ if portfolio_assets:
                 portfolio_nav = (1 + portfolio_returns).cumprod()
 
                 st.subheader("📊 Portfolio NAV Chart")
-                fig = px.line(x=portfolio_nav.index, y=portfolio_nav.values,
-                              labels={'x': 'Date', 'y': 'Portfolio NAV'})
+                fig = px.line(x=portfolio_nav.index, y=portfolio_nav.values, labels={'x': 'Date', 'y': 'Portfolio NAV'})
                 st.plotly_chart(fig, use_container_width=True)
 
                 st.subheader("📈 Performance Metrics")
