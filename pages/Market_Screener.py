@@ -2,30 +2,17 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from st_aggrid import AgGrid, GridOptionsBuilder
-import pyarrow.parquet as pq
-import gdown  # NEW
-
-# ----------- GDrive Downloader ----------
-@st.cache_data
-def download_from_gdrive(file_id: str, output: str):
-    url = f"https://drive.google.com/uc?id={file_id}"
-    gdown.download(url, output, quiet=False)
-    return output
 
 # ---------- Load Data ----------
 @st.cache_data
 def load_metadata():
-    # Replace with actual metadata file ID
-    metadata_file_id = "1P5eTXhvmn-5mtVtqMJg3yuBhbWKclEPs"
-    metadata_path = download_from_gdrive(metadata_file_id, "asset_metadata.parquet")
-    return pd.read_parquet(metadata_path)
+    # Load CSV instead of downloading parquet
+    return pd.read_csv("asset_Economic.FRED.DGS30.csv")
 
 @st.cache_data
 def load_price_data_for_asset(asset_id: str):
-    price_file_id = "1I1zViTWNsIbTwfFMoqNCevqrADk12YSV"
-    price_path = download_from_gdrive(price_file_id, "price_data.parquet")
-    table = pq.read_table(price_path)
-    df = table.to_pandas()
+    # Since you have one CSV file now, we assume it's already loaded as metadata
+    df = load_metadata()
     return df[df['asset_id'] == asset_id].copy()
 
 # ---------- Page Setup ----------
@@ -198,6 +185,10 @@ if selected:
     if df.empty:
         st.warning("No price data available.")
     else:
+        if 'daily_pct_change' not in df.columns:
+            # Calculate daily percentage change if missing
+            df['daily_pct_change'] = df['close'].pct_change() * 100
+
         df['cumulative_return'] = (1 + df['daily_pct_change'] / 100).cumprod()
 
         chart_mode = st.radio("View Mode:", ['Price', 'Cumulative Return'], horizontal=True)
