@@ -2,34 +2,19 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
-import pyarrow.parquet as pq
-import gdown  # For downloading from Google Drive
+
 from utils.backtest_engine import prepare_data, compute_portfolio_nav, compute_metrics
 from utils.analysis_tools import compare_multiple_portfolios
-
-# ----------- GDrive File IDs -----------
-METADATA_FILE_ID = "1P5eTXhvmn-5mtVtqMJg3yuBhbWKclEPs"
-PRICE_FILE_ID = "1I1zViTWNsIbTwfFMoqNCevqrADk12YSV"
-
-# ----------- GDrive Downloader -----------
-@st.cache_data
-def download_from_gdrive(file_id: str, output: str):
-    url = f"https://drive.google.com/uc?id={file_id}"
-    gdown.download(url, output, quiet=False)
-    return output
 
 # ----------- Load Metadata -----------
 @st.cache_data
 def load_metadata():
-    path = download_from_gdrive(METADATA_FILE_ID, "asset_metadata.parquet")
-    return pd.read_parquet(path)
+    return pd.read_csv("asset_Economic.FRED.DGS30.csv")
 
 # ----------- Load Filtered Price Data -----------
 @st.cache_data
 def load_filtered_price_data(selected_assets, start_date, end_date):
-    path = download_from_gdrive(PRICE_FILE_ID, "price_data.parquet")
-    table = pq.read_table(path)
-    df = table.to_pandas()
+    df = pd.read_csv("asset_Economic.FRED.DGS30.csv")
     df['date'] = pd.to_datetime(df['date'])
     start_date = pd.to_datetime(start_date)
     end_date = pd.to_datetime(end_date)
