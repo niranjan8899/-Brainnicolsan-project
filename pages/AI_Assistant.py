@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import numpy as np  # Import numpy to handle log calculations
 from utils.ai_agent import get_ai_response
 
 # ----------- Load Data -----------
