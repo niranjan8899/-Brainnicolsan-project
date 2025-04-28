@@ -1,22 +1,25 @@
+# 4_Historical_Simulation.py
+
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 from sklearn.linear_model import LinearRegression
 import numpy as np
 
-# ------------------ Load Asset IDs ------------------
+# ----------- Load Metadata (for asset list) -----------
 @st.cache_data
 def load_asset_ids():
-    df = pd.read_csv("asset_Economic.FRED.DGS30.csv", parse_dates=["date"])
+    df = pd.read_csv("data/asset_Economic.FRED.DGS30.csv")
     return sorted(df["asset_id"].unique())
 
-# ------------------ Load Data for Selected Asset ------------------
+# ----------- Load Data for Selected Assets -----------
 @st.cache_data
 def load_asset_data(asset_id):
-    df = pd.read_csv("asset_Economic.FRED.DGS30.csv", parse_dates=["date"])
+    df = pd.read_csv("data/asset_Economic.FRED.DGS30.csv")
+    df['date'] = pd.to_datetime(df['date'])  # Ensure 'date' column is datetime type
     return df[df["asset_id"] == asset_id].dropna(subset=["log_return"])
 
-# ------------------ Streamlit UI ------------------
+# ----------- UI -----------
 st.set_page_config(page_title="🧬 Historical Simulation Tool", layout="wide")
 st.title("🧬 Asset Historical Simulation Tool")
 
@@ -40,14 +43,14 @@ if target_asset and proxy_asset and target_asset != proxy_asset:
         suffixes=("_target", "_proxy")
     )
 
-    # Train regression model
-    X = merged[["log_return_proxy"]].rename(columns={"log_return_proxy": "log_return"})
+    # Train the regression model
+    X = merged[["log_return_proxy"]].rename(columns={"log_return_proxy": "log_return"})  # Rename for consistency
     y = merged["log_return_target"]
     model = LinearRegression().fit(X, y)
     merged["fitted"] = model.predict(X)
     r_squared = model.score(X, y)
 
-    # --- Price History Plot ---
+    # --- Time Series Visualization ---
     st.subheader("⏳ Price Evolution Over Time")
     fig_time = px.line(
         merged,
@@ -58,10 +61,10 @@ if target_asset and proxy_asset and target_asset != proxy_asset:
     )
     st.plotly_chart(fig_time, use_container_width=True)
 
-    # --- Return Analysis ---
+    # --- Return Relationship Visualization ---
     st.subheader("📈 Return Relationship Analysis")
     st.write(f"**R² Score:** {r_squared:.4f}")
-
+    
     col1, col2 = st.columns(2)
     with col1:
         fig_scatter = px.scatter(
@@ -88,7 +91,7 @@ if target_asset and proxy_asset and target_asset != proxy_asset:
         )
         st.plotly_chart(fig_corr, use_container_width=True)
 
-    # --- Simulation ---
+    # --- Simulation Section ---
     st.subheader("🧪 Historical Simulation")
     extension_range = st.slider("Days to simulate before target starts", 30, 500, 180)
 
@@ -96,22 +99,26 @@ if target_asset and proxy_asset and target_asset != proxy_asset:
     proxy_history = proxy_df[proxy_df["date"] < earliest_target_date].sort_values("date").tail(extension_range)
 
     if not proxy_history.empty:
+        # Prepare simulation - ensure column name matches training data
         proxy_history = proxy_history.copy()
         prediction_input = proxy_history[["log_return"]].rename(columns={"log_return": "log_return_proxy"})
         proxy_history["log_return_target_sim"] = model.predict(prediction_input.rename(columns={"log_return_proxy": "log_return"}))
-
-        base_price = target_df["close"].iloc[0]
+        
+        # Calculate simulated price series
+        base_price = target_df["close"].iloc[0]  # Use first actual price as reference
         proxy_history["simulated_price"] = base_price * np.exp(proxy_history["log_return_target_sim"].cumsum())
         proxy_history["asset_id"] = target_asset
         proxy_history["is_simulated"] = True
 
+        # Combine actual and simulated data
         combined = pd.concat([
             proxy_history[["date", "simulated_price", "is_simulated"]],
             target_df[["date", "close"]].rename(columns={"close": "simulated_price"}).assign(is_simulated=False)
         ]).sort_values("date")
 
         st.success(f"✅ Simulated {len(proxy_history)} days of data before {earliest_target_date.date()}.")
-
+        
+        # Plot combined price history
         fig_combined = px.line(
             combined,
             x="date",
@@ -123,6 +130,7 @@ if target_asset and proxy_asset and target_asset != proxy_asset:
         )
         st.plotly_chart(fig_combined, use_container_width=True)
 
+        # Plot simulated returns over time
         fig_returns = px.line(
             proxy_history,
             x="date",
