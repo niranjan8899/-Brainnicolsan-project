@@ -1,5 +1,3 @@
-# 2_Import_Tool.py
-
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -19,8 +17,7 @@ with st.expander("Data File Configuration"):
     with col1:
         # Data File section
         st.markdown("### Data File")
-        # Note: No file uploader here, since we are loading directly
-        st.info("Loading file: asset_Economic.FRED.DGS30.csv")
+        # File selection will be removed; directly load the CSV
         series_type = st.selectbox("Series_type", ["ETF","Economic","FUND", "features", "Index"], key="series_type")
         percentage_values = st.checkbox("Percentage Values", key="percentage_values")
         import_yield = st.checkbox("Import Yield", key="import_yield")
@@ -35,11 +32,12 @@ with st.expander("Data File Configuration"):
         asset_category = st.selectbox("Asset Category", ["None", "Equity", "Fixed Income", "Commodity", "Currency", "Other"], key="asset_category")
 
 # --------- Upload and Processing Section ---------
+# Directly load CSV from the "data" folder instead of using file uploader
+data_file_path = "data/asset_Economic.FRED.DGS30.csv"
 
 try:
-    # Load the file directly
-    df = pd.read_csv("asset_Economic.FRED.DGS30.csv")
-
+    df = pd.read_csv(data_file_path)
+    
     # Standardize column names (case insensitive)
     df.columns = df.columns.str.lower().str.replace(' ', '_')
     
@@ -74,9 +72,9 @@ try:
         
         # OHLC chart
         fig_ohlc = px.line(df, x="date", y=["open", "high", "low", "close"], 
-                         title=f"📊 OHLC Prices for {asset_display_name}",
-                         labels={"date": "Date", "value": "Price"},
-                         template="plotly_dark")
+                           title=f"📊 OHLC Prices for {asset_display_name}",
+                           labels={"date": "Date", "value": "Price"},
+                           template="plotly_dark")
         st.plotly_chart(fig_ohlc, use_container_width=True)
 
         # Volume chart if available
@@ -102,9 +100,9 @@ try:
             return_col = [opt[1] for opt in return_options if opt[0] == selected_return][0]
             
             fig_returns = px.line(df, x="date", y=return_col, 
-                                title=f"📉 {selected_return} over Time",
-                                labels={"date": "Date", return_col: "Return"},
-                                template="plotly_white")
+                                  title=f"📉 {selected_return} over Time",
+                                  labels={"date": "Date", return_col: "Return"},
+                                  template="plotly_white")
             st.plotly_chart(fig_returns, use_container_width=True)
         else:
             st.warning("No return series found in the data (daily_pct_change or log_return)")
