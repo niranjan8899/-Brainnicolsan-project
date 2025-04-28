@@ -13,7 +13,8 @@ def load_metadata():
 # ----------- Load Filtered Price Data -----------
 @st.cache_data
 def load_filtered_price_data(selected_assets, start_date, end_date):
-    df = pd.read_csv("data/price_data.csv")  # Replace with your actual price data file path
+    # Use asset_Economic.FRED.DGS30.csv as the new data file
+    df = pd.read_csv("data/asset_Economic.FRED.DGS30.csv")  # Updated file path
     # Ensure date column is datetime64[ns]
     df['date'] = pd.to_datetime(df['date'])
     # Convert input dates to pandas Timestamp for proper comparison
