@@ -3,16 +3,23 @@ import pandas as pd
 import plotly.express as px
 import numpy as np
 from datetime import date
+import os
 
 # ----------- Load Metadata -----------
 @st.cache_data
 def load_metadata():
-    return pd.read_csv("data/asset_Economic.FRED.DGS30.csv")
+    return pd.read_csv("data/asset_Economic.FRED.DGS30.csv")  # Corrected file path
 
 # ----------- Load Only Required Price Data -----------
 @st.cache_data
 def load_filtered_price_data(selected_assets, start_date, end_date):
-    df = pd.read_csv("data/price_data.csv")  # Replace with your actual price data file path
+    file_path = "data/asset_Economic.FRED.DGS30.csv"  # Corrected file path
+    if os.path.exists(file_path):
+        df = pd.read_csv(file_path)
+    else:
+        st.error(f"File not found: {file_path}")
+        return pd.DataFrame()  # Return empty DataFrame in case of error
+
     df['date'] = pd.to_datetime(df['date'])  # Ensure the 'date' column is in datetime format
     df = df[df["asset_id"].isin(selected_assets) & (df["date"].between(pd.to_datetime(start_date), pd.to_datetime(end_date)))]
     return df
