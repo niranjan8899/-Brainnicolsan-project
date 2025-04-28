@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import numpy as np  # Import numpy to handle log calculations
+import numpy as np
 from utils.ai_agent import get_ai_response
 
 # ----------- Load Data -----------
@@ -15,7 +15,11 @@ def load_minimal_price_data():
 
 @st.cache_data
 def load_metadata():
-    return pd.read_csv("data/asset_metadata.csv")
+    try:
+        return pd.read_csv("data/asset_metadata.csv")
+    except FileNotFoundError:
+        st.error("The file 'asset_metadata.csv' is missing. Please ensure it exists in the 'data' folder.")
+        return pd.DataFrame()  # Return an empty DataFrame if the file is missing
 
 @st.cache_data
 def load_nav_data():
