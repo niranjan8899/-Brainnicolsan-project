@@ -1,25 +1,13 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import pyarrow.parquet as pq
 from utils.data_cleaner import detect_missing_data, detect_outliers
-import gdown
-import os
-
-# ------------------ Google Drive Setup ------------------
-PRICE_DATA_DRIVE_URL = "https://drive.google.com/uc?id=1I1zViTWNsIbTwfFMoqNCevqrADk12YSV"
-
-# ------------------ Download from Google Drive ------------------
-def download_from_drive(gdrive_url, output_path):
-    if not os.path.exists(output_path):
-        gdown.download(gdrive_url, output_path, quiet=False)
 
 # ------------------ Load Only Needed Data ------------------
 @st.cache_data
 def load_minimal_price_data():
-    download_from_drive(PRICE_DATA_DRIVE_URL, "price_data.parquet")
-    table = pq.read_table("price_data.parquet", columns=["asset_id", "date", "close"])
-    df = table.to_pandas()
+    df = pd.read_csv("asset_Economic.FRED.DGS30.csv", parse_dates=["date"])
+    df = df[["asset_id", "date", "close"]]  # make sure columns match
     return df
 
 @st.cache_data
