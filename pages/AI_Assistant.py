@@ -1,24 +1,25 @@
-# 7_AI_Assistant.py
-
 import streamlit as st
 import pandas as pd
-import pyarrow.parquet as pq
 from utils.ai_agent import get_ai_response
 
 # ----------- Load Data -----------
 @st.cache_data
 def load_minimal_price_data():
-    table = pq.read_table("data/price_data.parquet", columns=["asset_id", "date", "close", "log_return"])
-    return table.to_pandas()
+    # Load the CSV file instead of Parquet
+    df = pd.read_csv("data/asset_Economic.FRED.DGS30.csv")
+    # Ensure the columns match the required format: "asset_id", "date", "close", "log_return"
+    df['date'] = pd.to_datetime(df['date'])  # Ensure 'date' column is in datetime format
+    df['log_return'] = np.log(df['close'] / df['close'].shift(1))  # Calculate log returns
+    return df[['asset_id', 'date', 'close', 'log_return']]  # Return only required columns
 
 @st.cache_data
 def load_metadata():
-    return pd.read_parquet("data/asset_metadata.parquet")
+    return pd.read_csv("data/asset_metadata.csv")
 
 @st.cache_data
 def load_nav_data():
     try:
-        return pd.read_parquet("data/portfolio_navs.parquet")
+        return pd.read_csv("data/portfolio_navs.csv")
     except FileNotFoundError:
         return pd.DataFrame()
 
