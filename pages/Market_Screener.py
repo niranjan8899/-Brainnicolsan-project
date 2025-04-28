@@ -6,12 +6,29 @@ from st_aggrid import AgGrid, GridOptionsBuilder
 # ---------- Load Data ----------
 @st.cache_data
 def load_metadata():
-    return pd.read_csv("data/asset_metadata.csv")  # Changed to CSV file
+    # Create a sample DataFrame instead of loading from CSV
+    data = {
+        "asset_id": [1, 2, 3],
+        "code": ["ABC", "XYZ", "DEF"],
+        "name": ["Asset 1", "Asset 2", "Asset 3"],
+        "description": ["Description of Asset 1", "Description of Asset 2", "Description of Asset 3"],
+        "asset_type": ["Stock", "Stock", "Commodity"],
+        "exchange": ["NSE", "BSE", "NSE"],
+        "category": ["Equity", "Equity", "Commodity"]
+    }
+    return pd.DataFrame(data)
 
 @st.cache_data
 def load_price_data_for_asset(asset_id: str):
-    df = pd.read_csv("data/price_data.csv")  # Changed to CSV file
-    return df[df['asset_id'] == asset_id].copy()
+    # Sample price data for assets (you can customize this based on your needs)
+    price_data = {
+        "asset_id": [1, 1, 1, 2, 2, 2, 3, 3, 3],
+        "date": pd.to_datetime(["2025-04-01", "2025-04-02", "2025-04-03", "2025-04-01", "2025-04-02", "2025-04-03", "2025-04-01", "2025-04-02", "2025-04-03"]),
+        "close": [100, 105, 103, 200, 210, 205, 50, 52, 51],
+        "daily_pct_change": [0, 5, -1.9, 0, 5, -2.4, 0, 4, -1.9]
+    }
+    df = pd.DataFrame(price_data)
+    return df[df['asset_id'] == int(asset_id)].copy()
 
 # ---------- Page Setup ----------
 st.set_page_config(page_title="📊 Market Screener", layout="wide")
