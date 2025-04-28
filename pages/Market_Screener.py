@@ -6,13 +6,11 @@ from st_aggrid import AgGrid, GridOptionsBuilder
 # ---------- Load Data ----------
 @st.cache_data
 def load_metadata():
-    # Load CSV instead of downloading parquet
-    return pd.read_csv("asset_Economic.FRED.DGS30.csv")
+    return pd.read_csv("data/asset_metadata.csv")  # Changed to CSV file
 
 @st.cache_data
 def load_price_data_for_asset(asset_id: str):
-    # Since you have one CSV file now, we assume it's already loaded as metadata
-    df = load_metadata()
+    df = pd.read_csv("data/price_data.csv")  # Changed to CSV file
     return df[df['asset_id'] == asset_id].copy()
 
 # ---------- Page Setup ----------
@@ -185,10 +183,6 @@ if selected:
     if df.empty:
         st.warning("No price data available.")
     else:
-        if 'daily_pct_change' not in df.columns:
-            # Calculate daily percentage change if missing
-            df['daily_pct_change'] = df['close'].pct_change() * 100
-
         df['cumulative_return'] = (1 + df['daily_pct_change'] / 100).cumprod()
 
         chart_mode = st.radio("View Mode:", ['Price', 'Cumulative Return'], horizontal=True)
