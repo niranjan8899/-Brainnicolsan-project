@@ -1,33 +1,33 @@
+# 3_Data_Cleaning.py
+
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 from utils.data_cleaner import detect_missing_data, detect_outliers
 
-# ------------------ Load Only Needed Data ------------------
+# ----------- Load Only Needed Data -----------
 @st.cache_data
 def load_minimal_price_data():
-    df = pd.read_csv("asset_Economic.FRED.DGS30.csv", parse_dates=["date"])
-    df = df[["asset_id", "date", "close"]]  # make sure columns match
-    return df
+    df = pd.read_csv("data/asset_Economic.FRED.DGS30.csv")
+    df['date'] = pd.to_datetime(df['date'])  # ensure 'date' column is datetime type
+    return df[['asset_id', 'date', 'close']]
 
 @st.cache_data
 def load_asset_price_data(asset_id):
     df = load_minimal_price_data()
     return df[df["asset_id"] == asset_id]
 
-# ------------------ UI ------------------
+# ----------- UI -----------
 st.set_page_config(page_title="🧹 Data Cleaning Tool", layout="wide")
 st.title("🧹 Data Cleaning & Validation Tool")
 
 price_data = load_minimal_price_data()
 
-# ----------- Step 1: Detect Missing Data -----------
 st.subheader("📌 Step 1: Detect Missing Data")
 missing_assets = detect_missing_data(price_data)
 st.write(f"Found {len(missing_assets)} assets with gaps > 6 days")
 st.dataframe(pd.DataFrame(missing_assets, columns=["Asset ID with Missing Data"]))
 
-# ----------- Step 2: Detect Outliers -----------
 st.subheader("📌 Step 2: Detect Outliers")
 outlier_df = detect_outliers(price_data)
 
@@ -43,7 +43,6 @@ if not outlier_df.empty:
 else:
     st.success("✅ No extreme outliers detected.")
 
-# ----------- Simulate Cleaning -----------
 st.markdown("---")
 
 if st.button("🚀 Simulate Cleaning (Tag Outliers)"):
