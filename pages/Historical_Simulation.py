@@ -3,31 +3,17 @@ import pandas as pd
 import plotly.express as px
 from sklearn.linear_model import LinearRegression
 import numpy as np
-import pyarrow.parquet as pq
-import gdown
-import os
 
-# ------------------ Download from Google Drive ------------------
-def download_from_drive(gdrive_url, output_path):
-    if not os.path.exists(output_path):
-        gdown.download(gdrive_url, output_path, quiet=False)
-
-# ------------------ File URLs (replace these) ------------------
-PRICE_DATA_DRIVE_URL = "https://drive.google.com/uc?id=1I1zViTWNsIbTwfFMoqNCevqrADk12YSV"
 # ------------------ Load Asset IDs ------------------
 @st.cache_data
 def load_asset_ids():
-    download_from_drive(PRICE_DATA_DRIVE_URL, "price_data.parquet")
-    table = pq.read_table("price_data.parquet", columns=["asset_id"])
-    df = table.to_pandas()
+    df = pd.read_csv("asset_Economic.FRED.DGS30.csv", parse_dates=["date"])
     return sorted(df["asset_id"].unique())
 
 # ------------------ Load Data for Selected Asset ------------------
 @st.cache_data
 def load_asset_data(asset_id):
-    download_from_drive(PRICE_DATA_DRIVE_URL, "price_data.parquet")
-    table = pq.read_table("price_data.parquet", columns=["asset_id", "date", "log_return", "close"])
-    df = table.to_pandas()
+    df = pd.read_csv("asset_Economic.FRED.DGS30.csv", parse_dates=["date"])
     return df[df["asset_id"] == asset_id].dropna(subset=["log_return"])
 
 # ------------------ Streamlit UI ------------------
