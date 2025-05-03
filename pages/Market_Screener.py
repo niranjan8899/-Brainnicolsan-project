@@ -61,13 +61,13 @@ def main():
 
     filtered = metadata.copy()
     if asset_id_input:
-        filtered = filtered[filtered["asset_id"].str.contains(asset_id_input, case=False, na=False)]
+        filtered = filtered[filtered["asset_id"].astype(str).str.contains(asset_id_input, case=False, na=False)]
     if code_input:
-        filtered = filtered[filtered["code"].str.contains(code_input, case=False, na=False)]
+        filtered = filtered[filtered["code"].astype(str).str.contains(code_input, case=False, na=False)]
     if name_input:
-        filtered = filtered[filtered["name"].str.contains(name_input, case=False, na=False)]
+        filtered = filtered[filtered["name"].astype(str).str.contains(name_input, case=False, na=False)]
     if description_input:
-        filtered = filtered[filtered["description"].str.contains(description_input, case=False, na=False)]
+        filtered = filtered[filtered["description"].astype(str).str.contains(description_input, case=False, na=False)]
 
     # Advanced Filters
     with st.expander("⚙️ Advanced Filters"):
