@@ -1,222 +1,184 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import duckdb
 from st_aggrid import AgGrid, GridOptionsBuilder
 
-# ---------- Load Data ----------
+# ---------- Data Loading ----------
 @st.cache_data
 def load_metadata():
-    # Create a sample DataFrame instead of loading from CSV
-    data = {
-        "asset_id": [1, 2, 3],
-        "code": ["ABC", "XYZ", "DEF"],
-        "name": ["Asset 1", "Asset 2", "Asset 3"],
-        "description": ["Description of Asset 1", "Description of Asset 2", "Description of Asset 3"],
-        "asset_type": ["Stock", "Stock", "Commodity"],
-        "exchange": ["NSE", "BSE", "NSE"],
-        "category": ["Equity", "Equity", "Commodity"]
-    }
-    return pd.DataFrame(data)
+    query = "SELECT * FROM 'data/asset_metadata.parquet'"
+    return duckdb.query(query).to_df()
 
 @st.cache_data
 def load_price_data_for_asset(asset_id: str):
-    # Sample price data for assets (you can customize this based on your needs)
-    price_data = {
-        "asset_id": [1, 1, 1, 2, 2, 2, 3, 3, 3],
-        "date": pd.to_datetime(["2025-04-01", "2025-04-02", "2025-04-03", "2025-04-01", "2025-04-02", "2025-04-03", "2025-04-01", "2025-04-02", "2025-04-03"]),
-        "close": [100, 105, 103, 200, 210, 205, 50, 52, 51],
-        "daily_pct_change": [0, 5, -1.9, 0, 5, -2.4, 0, 4, -1.9]
-    }
-    df = pd.DataFrame(price_data)
-    return df[df['asset_id'] == int(asset_id)].copy()
+    query = f"""
+        SELECT * FROM 'data/price_data.parquet'
+        WHERE asset_id = '{asset_id}'
+    """
+    return duckdb.query(query).to_df()
 
-# ---------- Page Setup ----------
-st.set_page_config(page_title="📊 Market Screener", layout="wide")
-st.markdown("""
-    <style>
-        .main {background-color: #000000;}
-        .block-container {padding-top: 1rem; background-color: #000000;}
-        h1, h2, h3, h4 {
-            color: #ffffff;
-        }
-        .stRadio > div {flex-direction: row;}
-        .stSelectbox label, .stTextInput label {
-            font-weight: bold;
-            color: #ffffff;
-        }
-        .stTextInput input, .stSelectbox select {
-            background-color: #333333;
-            color: white;
-        }
-        .stRadio label {
-            color: white;
-        }
-        .ag-theme-streamlit {
-            border-radius: 8px;
-            border: 1px solid #444;
-            background-color: #111;
-        }
-        .ag-header {
-            background-color: #222 !important;
-            color: white !important;
-        }
-        .ag-row {
-            background-color: #111 !important;
-            color: white !important;
-        }
-        .ag-cell {
-            border-color: #444 !important;
-        }
-        .stButton button {
-            background-color: #333;
-            color: white;
-            border: 1px solid #555;
-        }
-        .stButton button:hover {
-            background-color: #444;
-        }
-        .stExpander {
-            background-color: #111;
-            border: 1px solid #444;
-            border-radius: 8px;
-        }
-        .stExpander label {
-            color: white !important;
-        }
-    </style>
-""", unsafe_allow_html=True)
+# ---------- Persistent Save ----------
+def save_selected_assets(selected_assets):
+    con = duckdb.connect(database='data/selected_assets.duckdb')  # Save in a DuckDB file
+    con.execute("CREATE TABLE IF NOT EXISTS selected_assets (asset_id TEXT)")
+    con.execute("DELETE FROM selected_assets")
+    for asset_id in selected_assets:
+        con.execute("INSERT INTO selected_assets VALUES (?)", (asset_id,))
+    con.close()
 
-st.title("📊 Market Screener and Search Tool")
+def load_selected_assets():
+    con = duckdb.connect(database='data/selected_assets.duckdb')  # Same file for loading
+    try:
+        df = con.execute("SELECT asset_id FROM selected_assets").fetchdf()
+        return df['asset_id'].tolist()
+    except:
+        return []
+    finally:
+        con.close()
 
-# ---------- Load Metadata ----------
-metadata = load_metadata()
 
-# ---------- Search Filters ----------
-with st.expander("🔍 Search Filters", expanded=True):
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        asset_id_input = st.text_input("Asset ID")
-    with col2:
-        code_input = st.text_input("Code")
-    with col3:
-        name_input = st.text_input("Name")
-    with col4:
-        description_input = st.text_input("Description")
+# ---------- Main App ----------
+def main():
+    st.set_page_config(page_title="📊 Market Screener", layout="wide")
+    st.title("📊 Market Screener and Search Tool")
 
-    if st.button("Clear All"):
-        asset_id_input = code_input = name_input = description_input = ""
+    metadata = load_metadata()
 
-# ---------- Apply Filters ----------
-filtered = metadata.copy()
-if asset_id_input:
-    filtered = filtered[filtered["asset_id"].str.contains(asset_id_input, case=False, na=False)]
-if code_input:
-    filtered = filtered[filtered["code"].str.contains(code_input, case=False, na=False)]
-if name_input:
-    filtered = filtered[filtered["name"].str.contains(name_input, case=False, na=False)]
-if description_input:
-    filtered = filtered[filtered["description"].str.contains(description_input, case=False, na=False)]
+    # Search Filters
+    with st.expander("🔍 Search Filters", expanded=True):
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            asset_id_input = st.text_input("Asset ID")
+        with col2:
+            code_input = st.text_input("Code")
+        with col3:
+            name_input = st.text_input("Name")
+        with col4:
+            description_input = st.text_input("Description")
+        if st.button("Clear All"):
+            asset_id_input = code_input = name_input = description_input = ""
 
-# ---------- Dropdown Filters ----------
-with st.expander("⚙️ Advanced Filters"):
-    col1, col2, col3 = st.columns(3)
-    asset_types = [""] + sorted(metadata["asset_type"].dropna().unique().tolist())
-    exchanges = [""] + sorted(metadata["exchange"].dropna().unique().tolist())
-    categories = [""] + sorted(metadata["category"].dropna().unique().tolist())
+    filtered = metadata.copy()
+    if asset_id_input:
+        filtered = filtered[filtered["asset_id"].str.contains(asset_id_input, case=False, na=False)]
+    if code_input:
+        filtered = filtered[filtered["code"].str.contains(code_input, case=False, na=False)]
+    if name_input:
+        filtered = filtered[filtered["name"].str.contains(name_input, case=False, na=False)]
+    if description_input:
+        filtered = filtered[filtered["description"].str.contains(description_input, case=False, na=False)]
 
-    with col1:
-        selected_asset_type = st.selectbox("Asset Type", asset_types)
-    with col2:
-        selected_exchange = st.selectbox("Exchange", exchanges)
-    with col3:
-        selected_category = st.selectbox("Category", categories)
+    # Advanced Filters
+    with st.expander("⚙️ Advanced Filters"):
+        col1, col2, col3 = st.columns(3)
+        asset_types = [""] + sorted(metadata["asset_type"].dropna().unique().tolist())
+        exchanges = [""] + sorted(metadata["exchange"].dropna().unique().tolist())
+        categories = [""] + sorted(metadata["category"].dropna().unique().tolist())
 
-    if selected_asset_type:
-        filtered = filtered[filtered["asset_type"] == selected_asset_type]
-    if selected_exchange:
-        filtered = filtered[filtered["exchange"] == selected_exchange]
-    if selected_category:
-        filtered = filtered[filtered["category"] == selected_category]
+        with col1:
+            selected_asset_type = st.selectbox("Asset Type", asset_types)
+        with col2:
+            selected_exchange = st.selectbox("Exchange", exchanges)
+        with col3:
+            selected_category = st.selectbox("Category", categories)
 
-# ---------- Display Asset Table ----------
-st.markdown("### 🧾 Asset Results")
-gb = GridOptionsBuilder.from_dataframe(filtered)
-gb.configure_pagination()
-gb.configure_default_column(groupable=True, filterable=True, editable=False)
-gb.configure_selection('single')
-grid_options = gb.build()
+        if selected_asset_type:
+            filtered = filtered[filtered["asset_type"] == selected_asset_type]
+        if selected_exchange:
+            filtered = filtered[filtered["exchange"] == selected_exchange]
+        if selected_category:
+            filtered = filtered[filtered["category"] == selected_category]
 
-grid_response = AgGrid(
-    filtered,
-    gridOptions=grid_options,
-    height=400,
-    enable_enterprise_modules=False,
-    theme='streamlit',
-    custom_css={
-        ".ag-header-cell-label": {"color": "white"},
-        ".ag-cell": {"color": "white"}
-    }
-)
+    # Display Table
+    st.markdown("### 🧾 Asset Results")
+    gb = GridOptionsBuilder.from_dataframe(filtered)
+    gb.configure_pagination()
+    gb.configure_default_column(groupable=True, filterable=True, editable=False)
+    gb.configure_selection('multiple')
+    grid_options = gb.build()
 
-# ---------- Summary Charts ----------
-st.markdown("### 📊 Summary Visualizations")
-
-# Update Plotly template to dark
-plotly_template = "plotly_dark"
-
-# Pie Chart for Asset Type Distribution
-if not filtered.empty and "asset_type" in filtered.columns:
-    pie_fig = px.pie(
+    grid_response = AgGrid(
         filtered,
-        names="asset_type",
-        title="Asset Type Distribution",
-        hole=0.4,
-        template=plotly_template
+        gridOptions=grid_options,
+        height=400,
+        enable_enterprise_modules=False,
+        theme='streamlit'
     )
-    st.plotly_chart(pie_fig, use_container_width=True)
 
-# Bar Chart for Exchange Distribution
-if "exchange" in filtered.columns:
-    exchange_counts = filtered["exchange"].value_counts().reset_index()
-    exchange_counts.columns = ["Exchange", "Count"]
+    selected_rows = grid_response.get('selected_rows') or []
+    selected_asset_ids = [row['asset_id'] for row in selected_rows]
 
-    exchange_bar = px.bar(
-        exchange_counts,
-        x="Exchange",
-        y="Count",
-        title="Assets by Exchange",
-        labels={"Exchange": "Exchange", "Count": "Number of Assets"},
-        template=plotly_template
-    )
-    st.plotly_chart(exchange_bar, use_container_width=True)
+    if selected_asset_ids:
+        save_selected_assets(selected_asset_ids)
 
-# ---------- Price Chart ----------
-selected = grid_response['selected_rows']
-if selected:
-    asset_id = selected[0]["asset_id"]
-    st.markdown(f"### 📈 Price & Return Chart for `{asset_id}`")
+    # Summary Charts
+    st.markdown("### 📊 Summary Visualizations")
 
-    df = load_price_data_for_asset(asset_id)
-    if df.empty:
-        st.warning("No price data available.")
-    else:
-        df['cumulative_return'] = (1 + df['daily_pct_change'] / 100).cumprod()
+    if not filtered.empty and "asset_type" in filtered.columns:
+        pie_fig = px.pie(
+            filtered,
+            names="asset_type",
+            title="Asset Type Distribution",
+            hole=0.4,
+            template="plotly_white"
+        )
+        st.plotly_chart(pie_fig, use_container_width=True)
 
+    if "exchange" in filtered.columns:
+        exchange_counts = filtered["exchange"].value_counts().reset_index()
+        exchange_counts.columns = ["Exchange", "Count"]
+        exchange_bar = px.bar(
+            exchange_counts,
+            x="Exchange",
+            y="Count",
+            title="Assets by Exchange",
+            labels={"Exchange": "Exchange", "Count": "Number of Assets"},
+            template="plotly_white"
+        )
+        st.plotly_chart(exchange_bar, use_container_width=True)
+
+    # Price Charts
+    if selected_asset_ids:
+        st.markdown("### 📈 Price & Return Chart for Selected Assets")
         chart_mode = st.radio("View Mode:", ['Price', 'Cumulative Return'], horizontal=True)
         y_axis = 'close' if chart_mode == 'Price' else 'cumulative_return'
 
         time_range = st.radio("Select Time Range:", ['1Y', '5Y', '10Y', 'All'], horizontal=True)
-        if time_range != 'All':
-            years = int(time_range.replace("Y", ""))
-            df = df[df['date'] >= (pd.to_datetime(df['date'].max()) - pd.DateOffset(years=years))]
+        combined_df = pd.DataFrame()
 
-        fig = px.line(
-            df,
-            x='date',
-            y=y_axis,
-            labels={"date": "Date", y_axis: "Value"},
-            title=f"{chart_mode} over Time",
-            template=plotly_template
-        )
-        fig.update_traces(line=dict(color="#2a9d8f"))
-        st.plotly_chart(fig, use_container_width=True)
+        for asset_id in selected_asset_ids:
+            df = load_price_data_for_asset(asset_id)
+            if df.empty:
+                continue
+            df['cumulative_return'] = (1 + df['daily_pct_change'] / 100).cumprod()
+            df['asset_id'] = asset_id
+
+            if time_range != 'All':
+                try:
+                    df['date'] = pd.to_datetime(df['date'])
+                    cutoff = {
+                        '1Y': pd.Timestamp.now() - pd.DateOffset(years=1),
+                        '5Y': pd.Timestamp.now() - pd.DateOffset(years=5),
+                        '10Y': pd.Timestamp.now() - pd.DateOffset(years=10),
+                    }[time_range]
+                    df = df[df['date'] >= cutoff]
+                except:
+                    pass
+
+            combined_df = pd.concat([combined_df, df], ignore_index=True)
+
+        if not combined_df.empty:
+            chart = px.line(
+                combined_df,
+                x='date',
+                y=y_axis,
+                color='asset_id',
+                title=f"{chart_mode} over Time",
+                template="plotly_white"
+            )
+            st.plotly_chart(chart, use_container_width=True)
+
+# ---------- Run ----------
+if __name__ == "__main__":
+    main()
