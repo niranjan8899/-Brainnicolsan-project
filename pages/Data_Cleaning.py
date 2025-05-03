@@ -3,31 +3,40 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import duckdb
 from utils.data_cleaner import detect_missing_data, detect_outliers
 
-# ----------- Load Only Needed Data -----------
+# ---------- Data Loaders ----------
 @st.cache_data
-def load_minimal_price_data():
-    df = pd.read_csv("data/asset_Economic.FRED.DGS30.csv")
-    df['date'] = pd.to_datetime(df['date'])  # ensure 'date' column is datetime type
-    return df[['asset_id', 'date', 'close']]
+def load_price_data():
+    query = "SELECT asset_id, date, close FROM 'data/price_data.parquet'"
+    df = duckdb.query(query).to_df()
+    df['date'] = pd.to_datetime(df['date'])
+    return df
 
 @st.cache_data
 def load_asset_price_data(asset_id):
-    df = load_minimal_price_data()
-    return df[df["asset_id"] == asset_id]
+    query = f"""
+        SELECT asset_id, date, close FROM 'data/price_data.parquet'
+        WHERE asset_id = '{asset_id}'
+    """
+    df = duckdb.query(query).to_df()
+    df['date'] = pd.to_datetime(df['date'])
+    return df
 
-# ----------- UI -----------
+# ---------- UI ----------
 st.set_page_config(page_title="🧹 Data Cleaning Tool", layout="wide")
 st.title("🧹 Data Cleaning & Validation Tool")
 
-price_data = load_minimal_price_data()
+price_data = load_price_data()
 
+# ---------- Step 1: Detect Missing Data ----------
 st.subheader("📌 Step 1: Detect Missing Data")
 missing_assets = detect_missing_data(price_data)
 st.write(f"Found {len(missing_assets)} assets with gaps > 6 days")
 st.dataframe(pd.DataFrame(missing_assets, columns=["Asset ID with Missing Data"]))
 
+# ---------- Step 2: Detect Outliers ----------
 st.subheader("📌 Step 2: Detect Outliers")
 outlier_df = detect_outliers(price_data)
 
@@ -36,8 +45,8 @@ if not outlier_df.empty:
     st.dataframe(outlier_df[["asset_id", "date", "close", "z_score"]].sort_values("z_score", ascending=False))
 
     selected_asset = st.selectbox("Select an asset to view chart", outlier_df["asset_id"].unique())
-
     chart_df = load_asset_price_data(selected_asset)
+
     fig = px.line(chart_df, x="date", y="close", title=f"Price Chart for {selected_asset} (Outliers visible)")
     st.plotly_chart(fig, use_container_width=True)
 else:
@@ -45,6 +54,7 @@ else:
 
 st.markdown("---")
 
+# ---------- Step 3: Simulate Cleaning ----------
 if st.button("🚀 Simulate Cleaning (Tag Outliers)"):
     cleaned = price_data.copy()
     cleaned["has_error"] = False
